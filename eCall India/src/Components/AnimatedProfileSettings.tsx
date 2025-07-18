@@ -3,7 +3,7 @@ import { User, Heart, Phone, Shield, Globe, Bell, ChevronRight, Edit2, Check, X 
 
 const AnimatedProfileSettings: React.FC = () => {
   const [profile] = useState({
-    name: "Rajesh Kumar",
+    name: "",
     bloodGroup: "O+",
     phone: "+91 98765 43210",
     insuranceNo: "INS123456789",

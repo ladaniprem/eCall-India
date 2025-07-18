@@ -4,11 +4,16 @@ import { useRef, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 
 interface Hospital {
+  id: string;
   name: string;
-  distance: string;
-  status: string;
-  type: string;
-  eta: string;
+  address: string;
+  phone: string;
+  lat: number;
+  lng: number;
+  type: 'government' | 'private';
+  status: 'available' | 'busy' | 'full';
+  rating: number;
+  estimatedTime: number;
   specialties: string[];
   latitude: number;
   longitude: number;

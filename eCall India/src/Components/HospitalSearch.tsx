@@ -1,21 +1,21 @@
-import React, { useEffect, useState } from "react";
-import { MapPin, Phone, Navigation, Clock } from "lucide-react";
+import { useEffect, useState, useCallback } from "react";
 
-// Define Hospital Type
-interface Hospital {
+// Define the Hospital type
+type Hospital = {
   name: string;
   address: string;
-  type: "Government" | "Private" | "Unknown";
+  type: string;
   distance: string;
   phone: string;
-  status: "available" | "busy" | "unavailable";
+  status: string;
   specialties: string[];
   rating: number;
   estimatedTime: string;
   latitude: number;
   longitude: number;
   state: string;
-}
+};
+
 
 const HospitalSearch: React.FC = () => {
   const [searchRadius, setSearchRadius] = useState(5);
@@ -25,102 +25,86 @@ const HospitalSearch: React.FC = () => {
   const [lon, setLon] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Fetch hospitals from Nominatim
-  const fetchNearbyHospitals = async (lat: number, lon: number): Promise<Hospital[]> => {
-    const url = `https://nominatim.openstreetmap.org/search?format=json&q=hospital&limit=30&bounded=1&countrycodes=in&viewbox=68.0,37.1,97.5,6.7&lat=${lat}&lon=${lon}`;
+  const fetchNearbyHospitals = useCallback(async (lat: number, lon: number): Promise<Hospital[]> => {
+    const url = `https://api.tomtom.com/search/2/poiSearch/hospital.json?lat=${lat}&lon=${lon}&radius=10000&key=akmVQEaUoSTa3CMrcfUDhdc7hoJlBVNP`;
 
-    const res = await fetch(url, {
-      headers: {
-        "User-Agent": "IndiaHospitalSearchApp/1.0 (your@email.com)"
-      }
-    });
-
-    const data = await res.json();
-
-    return data.map((item: { display_name: string; lat: string; lon: string }) => {
-      const addressParts = item.display_name.split(",");
-      const state = addressParts[addressParts.length - 3]?.trim() || "Unknown";
-
-      return {
-        name: addressParts[0],
-        address: item.display_name,
-        type: Math.random() > 0.5 ? "Private" : "Government",
-        distance: `${(Math.random() * 5 + 1).toFixed(1)} km`,
-        phone: "+91 12345 67890",
-        status: Math.random() > 0.7 ? "busy" : "available",
-        specialties: ["Emergency", "Cardiology", "Trauma"].sort(() => 0.5 - Math.random()).slice(0, 2),
-        rating: Number((Math.random() * 1.5 + 3.5).toFixed(1)),
-        estimatedTime: `${Math.floor(Math.random() * 20 + 5)} mins`,
-        latitude: parseFloat(item.lat),
-        longitude: parseFloat(item.lon),
-        state,
-      };
-    });
-  };
-
-  useEffect(() => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        async (position) => {
-          const latitude = position.coords.latitude;
-          const longitude = position.coords.longitude;
-          setLat(latitude);
-          setLon(longitude);
-          const result = await fetchNearbyHospitals(latitude, longitude);
-          setHospitals(result);
-          setLoading(false);
-        },
-        (error) => {
-          console.error("Geolocation error:", error.message);
-          setLoading(false);
+    try {
+      const res = await fetch(url, {
+        headers: {
+          "User-Agent": "IndiaHospitalSearchApp/1.0 (your@email.com)"
         }
-      );
-    } else {
-      alert("Geolocation not supported");
-      setLoading(false);
+      });
+
+      if (!res.ok) {
+        throw new Error(`API request failed with status ${res.status}`);
+      }
+
+      const data = await res.json();
+
+      if (!Array.isArray(data)) {
+        throw new Error('Invalid API response format');
+      }
+
+      return data.map((item: { display_name: string; lat: string; lon: string }) => {
+        const addressParts = item.display_name.split(",");
+        const state = addressParts[addressParts.length - 3]?.trim() || "Unknown";
+
+        return {
+          name: addressParts[0],
+          address: item.display_name,
+          type: Math.random() > 0.5 ? "Private" : "Government",
+          distance: `${(Math.random() * 5 + 1).toFixed(1)} km`,
+          phone: "+91 12345 67890",
+          status: Math.random() > 0.7 ? "busy" : "available",
+          specialties: ["Emergency", "Cardiology", "Trauma"].sort(() => 0.5 - Math.random()).slice(0, 2),
+          rating: Number((Math.random() * 1.5 + 3.5).toFixed(1)),
+          estimatedTime: `${Math.floor(Math.random() * 20 + 5)} mins`,
+          latitude: parseFloat(item.lat),
+          longitude: parseFloat(item.lon),
+          state,
+        };
+      });
+    } catch (error) {
+      console.error("Error fetching hospitals:", error);
+      return [];
     }
   }, []);
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "available":
-        return "bg-green-500";
-      case "busy":
-        return "bg-yellow-500";
-      case "unavailable":
-        return "bg-red-500";
-      default:
-        return "bg-gray-500";
-    }
-  };
+  useEffect(() => {
+    const getLocationAndFetchHospitals = async () => {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          async (position) => {
+            const latitude = position.coords.latitude;
+            const longitude = position.coords.longitude;
+            setLat(latitude);
+            setLon(longitude);
+            const result = await fetchNearbyHospitals(latitude, longitude);
+            setHospitals(result);
+            setLoading(false);
+          },
+          (error) => {
+            console.error("Geolocation error:", error.message);
+            setLoading(false);
+          }
+        );
+      } else {
+        alert("Geolocation not supported");
+        setLoading(false);
+      }
+    };
 
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case "available":
-        return "Available";
-      case "busy":
-        return "Busy";
-      case "unavailable":
-        return "Unavailable";
-      default:
-        return "Unknown";
-    }
-  };
+    getLocationAndFetchHospitals();
+  }, [fetchNearbyHospitals]);
+
+
 
   const filteredHospitals = hospitals.filter((hospital) => {
     if (selectedFilter === "all") return true;
     return hospital.type.toLowerCase() === selectedFilter;
   });
 
-  // Group hospitals by state
-  const hospitalsByState = filteredHospitals.reduce((groups, hospital) => {
-    const state = hospital.state;
-    if (!groups[state]) {
-      groups[state] = [];
-    }
-    groups[state].push(hospital);
-    return groups;
-  }, {} as Record<string, Hospital[]>);
+
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -129,7 +113,7 @@ const HospitalSearch: React.FC = () => {
         <h1 className="text-2xl font-bold text-gray-900 mb-2">Nearby Hospitals</h1>
         {lat && lon && (
           <p className="text-gray-600 text-sm">
-            📍 Your Location: {lat.toFixed(4)}, {lon.toFixed(4)}
+            📍 Your Location: {lat?.toFixed(4)}, {lon?.toFixed(4)}
           </p>
         )}
       </div>
@@ -159,11 +143,10 @@ const HospitalSearch: React.FC = () => {
             <button
               key={filter}
               onClick={() => setSelectedFilter(filter)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                selectedFilter === filter
-                  ? "bg-blue-600 text-white"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-              }`}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${selectedFilter === filter
+                ? "bg-blue-600 text-white"
+                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                }`}
             >
               {filter.charAt(0).toUpperCase() + filter.slice(1)}
             </button>
@@ -171,93 +154,83 @@ const HospitalSearch: React.FC = () => {
         </div>
       </div>
 
+
+
       {/* Hospital List */}
-      <div className="p-4 space-y-6">
+      <div className="p-4 space-y-4">
         {loading ? (
           <p className="text-center text-gray-500">Loading hospitals...</p>
-        ) : Object.keys(hospitalsByState).length === 0 ? (
+        ) : filteredHospitals.length === 0 ? (
           <p className="text-center text-red-400">No hospitals found in this filter.</p>
         ) : (
-          Object.entries(hospitalsByState).map(([state, hospitalsInState]) => (
-            <div key={state} className="mb-8">
-              <h2 className="text-lg font-semibold text-gray-800 mb-3">{state}</h2>
-              <div className="space-y-4">
-                {hospitalsInState.map((hospital, index) => (
-                  <div key={index} className="bg-white rounded-xl shadow-sm overflow-hidden">
-                    <div className="p-4">
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex-1">
-                          <h3 className="font-semibold text-gray-900 mb-1">{hospital.name}</h3>
-                          <div className="flex items-center space-x-2 mb-2">
-                            <span
-                              className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                                hospital.type === "Government"
-                                  ? "bg-blue-100 text-blue-800"
-                                  : "bg-purple-100 text-purple-800"
-                              }`}
-                            >
-                              {hospital.type}
-                            </span>
-                            <div className="flex items-center space-x-1">
-                              <div
-                                className={`w-2 h-2 rounded-full ${getStatusColor(hospital.status)}`}
-                              ></div>
-                              <span className="text-xs text-gray-600">
-                                {getStatusText(hospital.status)}
-                              </span>
-                            </div>
-                          </div>
-                          <div className="flex items-center space-x-4 text-sm text-gray-500">
-                            <div className="flex items-center space-x-1">
-                              <MapPin className="w-4 h-4" />
-                              <span>{hospital.distance}</span>
-                            </div>
-                            <div className="flex items-center space-x-1">
-                              <Clock className="w-4 h-4" />
-                              <span>{hospital.estimatedTime}</span>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <div className="flex items-center space-x-1 mb-1">
-                            <span className="text-sm font-medium text-gray-900">{hospital.rating}</span>
-                            <span className="text-yellow-500">★</span>
-                          </div>
-                        </div>
+          filteredHospitals.map((hospital, index) => (
+            <div key={index} className="bg-white rounded-xl shadow-sm overflow-hidden">
+              <div className="p-4">
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-gray-900 mb-1">{hospital.name}</h3>
+                    <div className="flex items-center space-x-2 mb-2">
+                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${hospital.type === 'Government'
+                        ? 'bg-blue-100 text-blue-800'
+                        : hospital.type === 'Private'
+                          ? 'bg-purple-100 text-purple-800'
+                          : 'bg-gray-100 text-gray-700'
+                        }`}>
+                        {hospital.type}
+                      </span>
+                      <div className="flex items-center space-x-1">
+                        <div className={`w-2 h-2 rounded-full ${hospital.status === 'available' ? 'bg-green-500' :
+                          hospital.status === 'busy' ? 'bg-yellow-500' :
+                            hospital.status === 'unavailable' ? 'bg-red-500' : 'bg-gray-500'}`}></div>
+                        <span className="text-xs text-gray-600">{
+                          hospital.status === 'available' ? 'Available' :
+                            hospital.status === 'busy' ? 'Busy' :
+                              hospital.status === 'unavailable' ? 'Unavailable' : 'Unknown'
+                        }</span>
                       </div>
-
-                      <div className="mb-3 flex flex-wrap gap-2">
-                        {hospital.specialties.map((specialty, idx) => (
-                          <span
-                            key={idx}
-                            className="px-2 py-1 bg-gray-100 text-gray-700 rounded-md text-xs"
-                          >
-                            {specialty}
-                          </span>
-                        ))}
+                    </div>
+                    <div className="flex items-center space-x-4 text-sm text-gray-500">
+                      <div className="flex items-center space-x-1">
+                        {/* MapPin icon can be added if you import it */}
+                        <span>{hospital.distance}</span>
                       </div>
-
-                      <div className="flex space-x-2">
-                        <a
-                          href={`tel:${hospital.phone}`}
-                          className="flex-1 bg-red-600 text-white py-2 rounded-lg hover:bg-red-700 transition-colors flex items-center justify-center space-x-2"
-                        >
-                          <Phone className="w-4 h-4" />
-                          <span>Call Now</span>
-                        </a>
-                        <a
-                          href={`https://www.google.com/maps/dir/?api=1&destination=${hospital.latitude},${hospital.longitude}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center space-x-2"
-                        >
-                          <Navigation className="w-4 h-4" />
-                          <span>Directions</span>
-                        </a>
+                      <div className="flex items-center space-x-1">
+                        {/* Clock icon can be added if you import it */}
+                        <span>{hospital.estimatedTime}</span>
                       </div>
                     </div>
                   </div>
-                ))}
+                  <div className="text-right">
+                    <div className="flex items-center space-x-1 mb-1">
+                      <span className="text-sm font-medium text-gray-900">{hospital.rating}</span>
+                      <span className="text-yellow-500">★</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mb-3">
+                  <div className="flex flex-wrap gap-2">
+                    {hospital.specialties.map((specialty, idx) => (
+                      <span
+                        key={idx}
+                        className="px-2 py-1 bg-gray-100 text-gray-700 rounded-md text-xs"
+                      >
+                        {specialty}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex space-x-2">
+                  <button className="flex-1 bg-red-600 text-white py-2 rounded-lg hover:bg-red-700 transition-colors flex items-center justify-center space-x-2">
+                    {/* Phone icon can be added if you import it */}
+                    <span>Call Now</span>
+                  </button>
+                  <button className="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center space-x-2">
+                    {/* Navigation icon can be added if you import it */}
+                    <span>Directions</span>
+                  </button>
+                </div>
               </div>
             </div>
           ))

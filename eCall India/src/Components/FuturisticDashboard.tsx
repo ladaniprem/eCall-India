@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Activity, Zap, Wifi, Battery } from 'lucide-react';
 import MetricCard from './MetricCard';
-import HospitalCard from './HospitalCard';
 import FuturisticSOS from './FuturisticSOS';
 import IntelligentCrashDetection from './IntelligentCrashDetection';
 import { DarkModeToggle } from './DarkModeProvider';
 import Map from './Map';
+import LiveLocationMap from './LiveLocationMap';
 
 interface Hospital {
   name: string;
@@ -197,7 +197,7 @@ const FuturisticDashboard = ({ onEmergency }: FuturisticDashboardProps): React.R
           </div>
           <div className="p-6 space-y-4">
             {filteredHospitals.map((hospital, index) => (
-              <HospitalCard key={index} hospital={hospital} getStatusColor={getStatusColor} />
+              <LiveLocationMap key={index} hospital={hospital} getStatusColor={getStatusColor} />
             ))}
           </div>
         </div>
