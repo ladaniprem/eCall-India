@@ -1,5 +1,5 @@
 export const fetchNearbyHospitals = async (lat: number, lon: number) => {
-  const apiKey = "akmVQEaUoSTa3CMrcfUDhdc7hoJlBVN";
+  const apiKey = process.env.TOMTOM_API_KEY as string;
   const url = `https://api.tomtom.com/search/2/poiSearch/hospital.json?lat=${lat}&lon=${lon}&radius=10000&key=${apiKey}`;
 
   try {
