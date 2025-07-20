@@ -1,18 +1,21 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { User, Mail, Phone, Shield, Check, ArrowRight, Eye, EyeOff } from 'lucide-react';
+import { User, Mail, Shield, Check, ArrowRight, Eye, EyeOff, Car, Users } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-
-interface EmergencyContact {
-  name: string;
-  phone: string;
-}
 
 interface UserData {
   name: string;
   email: string;
-  phone: string;
-  emergencyContacts: EmergencyContact[];
+  vehicleModel: string;
+  vehicleNumber: string;
+  country?: string;
+  state?: string;
+  bloodGroup?: string;
+  emergencyContacts: {
+    name: string;
+    phone: string;
+    relation: string;
+  }[];
 }
 
 interface AuthSystemProps {
@@ -20,14 +23,20 @@ interface AuthSystemProps {
 }
 
 const AuthSystem: React.FC<AuthSystemProps> = ({ onAuthComplete }) => {
-  const [authStep, setAuthStep] = useState<'signin' | 'signup' | 'otp' | 'profile'>('signin');
+  const [authStep, setAuthStep] = useState<'signin' | 'signup' | 'vehicle-details' | 'emergency-contacts'>('signin');
   const [formData, setFormData] = useState({
     email: '',
     password: '',
-    phone: '',
     name: '',
-    otp: '',
-    showPassword: false
+    showPassword: false,
+    vehicleModel: '',
+    vehicleNumber: '',
+    country: 'India',
+    state: '',
+    bloodGroup: '',
+    emergencyContacts: [
+      { name: '', phone: '', relation: 'Family' }
+    ]
   });
   const [isLoading, setIsLoading] = useState(false);
 
@@ -36,37 +45,62 @@ const AuthSystem: React.FC<AuthSystemProps> = ({ onAuthComplete }) => {
     // Simulate Google auth
     setTimeout(() => {
       setIsLoading(false);
-      setAuthStep('profile');
+      setAuthStep('vehicle-details');
     }, 2000);
   };
 
   const handleEmailAuth = async (type: 'signin' | 'signup') => {
     setIsLoading(true);
-    // Simulate email auth
     setTimeout(() => {
       setIsLoading(false);
       if (type === 'signup') {
-        setAuthStep('otp');
+        setAuthStep('vehicle-details');
       } else {
-        setAuthStep('profile');
+        // Existing user - complete profile
+        const userData = {
+          name: formData.name || 'User',
+          email: formData.email,
+          vehicleModel: 'Honda City',
+          vehicleNumber: 'DL 01 AB 1234',
+          emergencyContacts: [
+            { name: 'Family Contact', phone: '+91 98765 43210', relation: 'Family' }
+          ]
+        };
+        onAuthComplete(userData);
       }
     }, 1500);
   };
 
-  const handleOtpVerification = () => {
-    if (formData.otp.length === 6) {
-      setAuthStep('profile');
-    }
+  const handleVehicleDetailsSubmit = () => {
+    setAuthStep('emergency-contacts');
   };
 
-  const handleProfileComplete = () => {
+  const handleEmergencyContactsSubmit = () => {
     const userData = {
       name: formData.name,
       email: formData.email,
-      phone: formData.phone,
-      emergencyContacts: []
+      vehicleModel: formData.vehicleModel,
+      vehicleNumber: formData.vehicleNumber,
+      country: formData.country,
+      state: formData.state,
+      bloodGroup: formData.bloodGroup,
+      emergencyContacts: formData.emergencyContacts
     };
     onAuthComplete(userData);
+  };
+
+  const addEmergencyContact = () => {
+    setFormData({
+      ...formData,
+      emergencyContacts: [...formData.emergencyContacts, { name: '', phone: '', relation: 'Family' }]
+    });
+  };
+
+  const updateEmergencyContact = (index: number, field: string, value: string) => {
+    const updatedContacts = formData.emergencyContacts.map((contact, i) => 
+      i === index ? { ...contact, [field]: value } : contact
+    );
+    setFormData({ ...formData, emergencyContacts: updatedContacts });
   };
 
   const containerVariants = {
@@ -284,14 +318,21 @@ const AuthSystem: React.FC<AuthSystemProps> = ({ onAuthComplete }) => {
 
                 <motion.div variants={inputVariants} whileFocus="focus" whileTap="blur">
                   <div className="relative">
-                    <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                    <Shield className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
                     <input
-                      type="tel"
-                      placeholder="Phone number"
-                      value={formData.phone}
-                      onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                      className="w-full pl-10 pr-4 py-3 glass-morph border border-white/30 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 dark:text-white placeholder-gray-500"
+                      type={formData.showPassword ? "text" : "password"}
+                      placeholder="Password"
+                      value={formData.password}
+                      onChange={(e) => setFormData({...formData, password: e.target.value})}
+                      className="w-full pl-10 pr-12 py-3 glass-morph border border-white/30 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 dark:text-white placeholder-gray-500"
                     />
+                    <button
+                      type="button"
+                      onClick={() => setFormData({...formData, showPassword: !formData.showPassword})}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    >
+                      {formData.showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    </button>
                   </div>
                 </motion.div>
 
@@ -326,9 +367,9 @@ const AuthSystem: React.FC<AuthSystemProps> = ({ onAuthComplete }) => {
           </motion.div>
         )}
 
-        {authStep === 'otp' && (
+        {authStep === 'vehicle-details' && (
           <motion.div
-            key="otp"
+            key="vehicle-details"
             variants={containerVariants}
             initial="hidden"
             animate="visible"
@@ -341,51 +382,100 @@ const AuthSystem: React.FC<AuthSystemProps> = ({ onAuthComplete }) => {
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
                   transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
-                  className="w-16 h-16 bg-gradient-to-br from-yellow-500 to-orange-600 rounded-full flex items-center justify-center mx-auto mb-4"
+                  className="w-16 h-16 bg-gradient-to-br from-orange-500 to-red-600 rounded-full flex items-center justify-center mx-auto mb-4"
                 >
-                  <Check className="w-8 h-8 text-white" />
+                  <Car className="w-8 h-8 text-white" />
                 </motion.div>
                 <CardTitle className="text-2xl font-bold text-gray-900 dark:text-white">
-                  Verify Phone
+                  Vehicle Details
                 </CardTitle>
                 <p className="text-gray-600 dark:text-gray-400">
-                  Enter the 6-digit code sent to {formData.phone}
+                  Help us protect you better
                 </p>
               </CardHeader>
               <CardContent className="space-y-4">
                 <motion.div variants={inputVariants} whileFocus="focus" whileTap="blur">
                   <input
                     type="text"
-                    placeholder="000000"
-                    value={formData.otp}
-                    onChange={(e) => setFormData({...formData, otp: e.target.value})}
-                    maxLength={6}
-                    className="w-full px-4 py-3 glass-morph border border-white/30 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 dark:text-white placeholder-gray-500 text-center text-2xl tracking-widest"
+                    placeholder="Vehicle Model (e.g., Honda City)"
+                    value={formData.vehicleModel}
+                    onChange={(e) => setFormData({...formData, vehicleModel: e.target.value})}
+                    className="w-full px-4 py-3 glass-morph border border-white/30 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 dark:text-white placeholder-gray-500"
                   />
                 </motion.div>
 
+                <motion.div variants={inputVariants} whileFocus="focus" whileTap="blur">
+                  <input
+                    type="text"
+                    placeholder="Vehicle Number (e.g., DL 01 AB 1234)"
+                    value={formData.vehicleNumber}
+                    onChange={(e) => setFormData({...formData, vehicleNumber: e.target.value})}
+                    className="w-full px-4 py-3 glass-morph border border-white/30 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 dark:text-white placeholder-gray-500"
+                  />
+                </motion.div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <motion.div variants={inputVariants} whileFocus="focus" whileTap="blur">
+                    <select
+                      value={formData.country}
+                      onChange={(e) => setFormData({...formData, country: e.target.value})}
+                      className="w-full px-4 py-3 glass-morph border border-white/30 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 dark:text-white"
+                    >
+                      <option value="India">India</option>
+                    </select>
+                  </motion.div>
+
+                  <motion.div variants={inputVariants} whileFocus="focus" whileTap="blur">
+                    <select
+                      value={formData.state}
+                      onChange={(e) => setFormData({...formData, state: e.target.value})}
+                      className="w-full px-4 py-3 glass-morph border border-white/30 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 dark:text-white"
+                    >
+                      <option value="">Select State</option>
+                      <option value="Delhi">Delhi</option>
+                      <option value="Maharashtra">Maharashtra</option>
+                      <option value="Karnataka">Karnataka</option>
+                      <option value="Tamil Nadu">Tamil Nadu</option>
+                      <option value="Gujarat">Gujarat</option>
+                    </select>
+                  </motion.div>
+                </div>
+
+                <motion.div variants={inputVariants} whileFocus="focus" whileTap="blur">
+                  <select
+                    value={formData.bloodGroup}
+                    onChange={(e) => setFormData({...formData, bloodGroup: e.target.value})}
+                    className="w-full px-4 py-3 glass-morph border border-white/30 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 dark:text-white"
+                  >
+                    <option value="">Blood Group (Optional)</option>
+                    <option value="A+">A+</option>
+                    <option value="A-">A-</option>
+                    <option value="B+">B+</option>
+                    <option value="B-">B-</option>
+                    <option value="AB+">AB+</option>
+                    <option value="AB-">AB-</option>
+                    <option value="O+">O+</option>
+                    <option value="O-">O-</option>
+                  </select>
+                </motion.div>
+
                 <motion.button
-                  onClick={handleOtpVerification}
-                  disabled={formData.otp.length !== 6}
+                  onClick={handleVehicleDetailsSubmit}
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  className="w-full bg-gradient-to-r from-yellow-600 to-orange-600 text-white py-3 rounded-xl font-semibold hover:from-yellow-700 hover:to-orange-700 transition-all duration-300 disabled:opacity-50 flex items-center justify-center space-x-2"
+                  className="w-full bg-gradient-to-r from-orange-600 to-red-600 text-white py-3 rounded-xl font-semibold hover:from-orange-700 hover:to-red-700 transition-all duration-300 flex items-center justify-center space-x-2"
                 >
-                  <span>Verify</span>
+                  <span>Continue</span>
                   <ArrowRight className="w-4 h-4" />
                 </motion.button>
-
-                <button className="w-full text-blue-600 dark:text-blue-400 hover:underline text-sm">
-                  Resend code
-                </button>
               </CardContent>
             </Card>
           </motion.div>
         )}
 
-        {authStep === 'profile' && (
+        {authStep === 'emergency-contacts' && (
           <motion.div
-            key="profile"
+            key="emergency-contacts"
             variants={containerVariants}
             initial="hidden"
             animate="visible"
@@ -400,30 +490,71 @@ const AuthSystem: React.FC<AuthSystemProps> = ({ onAuthComplete }) => {
                   transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
                   className="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-600 rounded-full flex items-center justify-center mx-auto mb-4"
                 >
-                  <Shield className="w-8 h-8 text-white" />
+                  <Users className="w-8 h-8 text-white" />
                 </motion.div>
                 <CardTitle className="text-2xl font-bold text-gray-900 dark:text-white">
-                  Almost Done!
+                  Emergency Contacts
                 </CardTitle>
                 <p className="text-gray-600 dark:text-gray-400">
-                  Complete your emergency profile
+                  Who should we contact in an emergency?
                 </p>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="text-center">
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                    Your account has been created successfully. You can now set up emergency contacts and preferences in the app.
-                  </p>
-                </div>
+                {formData.emergencyContacts.map((contact, index) => (
+                  <div key={index} className="space-y-3 p-4 glass-morph rounded-lg border border-white/20">
+                    <motion.div variants={inputVariants} whileFocus="focus" whileTap="blur">
+                      <input
+                        type="text"
+                        placeholder="Contact Name"
+                        value={contact.name}
+                        onChange={(e) => updateEmergencyContact(index, 'name', e.target.value)}
+                        className="w-full px-4 py-3 glass-morph border border-white/30 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 dark:text-white placeholder-gray-500"
+                      />
+                    </motion.div>
+
+                    <motion.div variants={inputVariants} whileFocus="focus" whileTap="blur">
+                      <input
+                        type="tel"
+                        placeholder="Phone Number"
+                        value={contact.phone}
+                        onChange={(e) => updateEmergencyContact(index, 'phone', e.target.value)}
+                        className="w-full px-4 py-3 glass-morph border border-white/30 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 dark:text-white placeholder-gray-500"
+                      />
+                    </motion.div>
+
+                    <motion.div variants={inputVariants} whileFocus="focus" whileTap="blur">
+                      <select
+                        value={contact.relation}
+                        onChange={(e) => updateEmergencyContact(index, 'relation', e.target.value)}
+                        className="w-full px-4 py-3 glass-morph border border-white/30 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 dark:text-white"
+                      >
+                        <option value="Family">Family</option>
+                        <option value="Friend">Friend</option>
+                        <option value="Doctor">Doctor</option>
+                        <option value="Colleague">Colleague</option>
+                        <option value="Other">Other</option>
+                      </select>
+                    </motion.div>
+                  </div>
+                ))}
 
                 <motion.button
-                  onClick={handleProfileComplete}
+                  onClick={addEmergencyContact}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="w-full glass-morph border border-white/30 dark:border-gray-600 py-3 rounded-xl font-semibold hover:bg-white/20 dark:hover:bg-gray-700/20 transition-all duration-300 text-gray-900 dark:text-white"
+                >
+                  + Add Another Contact
+                </motion.button>
+
+                <motion.button
+                  onClick={handleEmergencyContactsSubmit}
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-3 rounded-xl font-semibold hover:from-purple-700 hover:to-pink-700 transition-all duration-300 flex items-center justify-center space-x-2"
                 >
-                  <span>Continue to App</span>
-                  <ArrowRight className="w-4 h-4" />
+                  <span>Complete Setup</span>
+                  <Check className="w-4 h-4" />
                 </motion.button>
               </CardContent>
             </Card>

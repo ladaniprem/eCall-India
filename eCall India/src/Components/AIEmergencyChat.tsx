@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Send, Bot, User, Mic, MicOff, Volume2, VolumeX, Zap } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+import { fetchNearbyHospitals } from '../api/hospitalAPI';
 
 
 interface Message {
@@ -43,6 +44,11 @@ const AIEmergencyChat: React.FC<AIEmergencyChatProps> = ({
   const [inputMessage, setInputMessage] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [isListening, setIsListening] = useState(false);
+
+  // Toggle voice input listening state
+  const toggleVoiceInput = () => {
+    setIsListening((prev) => !prev);
+  };
   const [voiceEnabled, setVoiceEnabled] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -61,48 +67,78 @@ const AIEmergencyChat: React.FC<AIEmergencyChatProps> = ({
     "What is my emergency contact info?"
   ];
 
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
-
-
-const handleSendMessage = (message: string) => {
-  if (!message.trim()) return;
-
-  const userMessage: Message = {
-    id: Date.now().toString(),
-    type: 'user',
-    content: message,
-    timestamp: new Date()
-  };
-
-  setMessages(prev => [...prev, userMessage]);
-  setInputMessage('');
-  setIsTyping(true);
-
-  // Simulate AI response
-  setTimeout(() => {
-    const botResponse = generateBotResponse(message);
-    const botMessage: Message = {
-      id: (Date.now() + 1).toString(),
-      type: 'bot',
-      content: botResponse,
-      timestamp: new Date()
-    };
-
-    setMessages(prev => [...prev, botMessage]);
-    setIsTyping(false);
-  }, 1200);
-};
+useEffect(() => {
+  messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+}, [messages]);
 
 // Mock function to get nearby hospitals
-function getNearbyHospitalsFromMap(lat?: number, lng?: number): Hospital[] {
-  // You can replace this with real API logic as needed
-   const TOMTOM_API_KEY = import.meta.env.VITE_TOMTOM_API_KEY;
-  // const SEARCH_API_URL = 'https://api.tomtom.com/search/2/poiSearch/hospital.json';
-  // For now, return static data
+async function getNearbyHospitalsFromMap(lat?: number, lng?: number): Promise<Hospital[]> {
+  if (lat !== undefined && lng !== undefined) {
+    try {
+      // Use the real API to fetch hospitals based on location
+      const hospitals = await fetchNearbyHospitals();
+      // Map API hospitals to local Hospital type with a dummy distance (e.g., 1.0)
+      return hospitals.map(hospital => ({
+        name: hospital.name,
+        distance: 1.0, // TODO: Replace with real distance calculation if available
+        type: hospital.type,
+        phone: hospital.phone,
+        address: hospital.address
+      }));
+    } catch {
+      // Fallback to static data if API fails
+      return [
+        {
+          name: "City Hospital",
+          distance: 2.3,
+          type: "Multi-specialty",
+          phone: "0123456789",
+          address: "123 Main St, City"
+        },
+        {
+          name: "General Medical Center",
+          distance: 3.8,
+          type: "General",
+          phone: "0987654321",
+          address: "456 Health Ave, City"
+        },
+        {
+          name: "Trauma Care Hospital",
+          distance: 5.1,
+          type: "Trauma",
+          phone: "0112233445",
+          address: "789 Emergency Rd, City"
+        }
+      ];
+    }
+  }
+  // If no location, return static data
+  return [
+    {
+      name: "City Hospital",
+      distance: 2.3,
+      type: "Multi-specialty",
+      phone: "0123456789",
+      address: "123 Main St, City"
+    },
+    {
+      name: "General Medical Center",
+      distance: 3.8,
+      type: "General",
+      phone: "0987654321",
+      address: "456 Health Ave, City"
+    },
+    {
+      name: "Trauma Care Hospital",
+      distance: 5.1,
+      type: "Trauma",
+      phone: "0112233445",
+      address: "789 Emergency Rd, City"
+    }
+  ];
+}
 
-const generateBotResponse = (userMessage: string): string => {
+const generateBotResponse = async (userMessage: string): Promise<string> => {
   const msg = userMessage.toLowerCase();
 
   if (isEmergencyMode) {
@@ -138,20 +174,22 @@ const generateBotResponse = (userMessage: string): string => {
     // Fetch real-time nearby hospitals from an API if userLocation is available
     if (userLocation) {
       // Placeholder static/mock data
-      const nearbyHospitals = getNearbyHospitalsFromMap(userLocation.lat, userLocation.lng);
-      let hospitalList = nearbyHospitals.map((hospital: Hospital) =>
-        `• ${hospital.name} - ${hospital.distance.toFixed(1)} km (${hospital.type})\n  📞 [Call](${hospital.phone ? `tel:${hospital.phone}` : '#'}) | 🗺️ [Map](https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(hospital.name + ' ' + (hospital.address || ''))})`
-      ).join('\n');
-      hospitalList += `\n\n📍 Your location: (${userLocation.lat.toFixed(5)}, ${userLocation.lng.toFixed(5)})`;
+      // NOTE: generateBotResponse must be async to use await here
+      return getNearbyHospitalsFromMap(userLocation.lat, userLocation.lng).then((nearbyHospitals) => {
+        const hospitalList = nearbyHospitals.map((hospital: Hospital) =>
+          `• ${hospital.name} - ${hospital.distance.toFixed(1)} km (${hospital.type})\n  📞 [Call](${hospital.phone ? `tel:${hospital.phone}` : '#'}) | 🗺️ [Map](https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(hospital.name + ' ' + (hospital.address || ''))})`
+        ).join('\n') + `\n\n📍 Your location: (${userLocation.lat.toFixed(5)}, ${userLocation.lng.toFixed(5)})`;
 
-      return `🏥 ${locationText} (real-time):\n\n${hospitalList}\n\nWould you like me to help you call any of these hospitals or get directions?`;
+        return `🏥 ${locationText} (real-time):\n\n${hospitalList}\n\nWould you like me to help you call any of these hospitals or get directions?`;
+      });
     } else {
       // Fallback if no location
-      const nearbyHospitals = getNearbyHospitalsFromMap();
-      let hospitalList = nearbyHospitals.map((hospital: Hospital) =>
-        `• ${hospital.name} - ${hospital.distance.toFixed(1)} km (${hospital.type})\n  📞 [Call](${hospital.phone ? `tel:${hospital.phone}` : '#'}) | 🗺️ [Map](https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(hospital.name + ' ' + (hospital.address || ''))})`
-      ).join('\n');
-      return `🏥 ${locationText}:\n\n${hospitalList}\n\nWould you like me to help you call any of these hospitals or get directions?`;
+      return getNearbyHospitalsFromMap().then((nearbyHospitals) => {
+        const hospitalList = nearbyHospitals.map((hospital: Hospital) =>
+          `• ${hospital.name} - ${hospital.distance.toFixed(1)} km (${hospital.type})\n  📞 [Call](${hospital.phone ? `tel:${hospital.phone}` : '#'}) | 🗺️ [Map](https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(hospital.name + ' ' + (hospital.address || ''))})`
+        ).join('\n');
+        return `🏥 ${locationText}:\n\n${hospitalList}\n\nWould you like me to help you call any of these hospitals or get directions?`;
+      });
     }
   }
 
@@ -166,237 +204,251 @@ const generateBotResponse = (userMessage: string): string => {
   return "I understand you need help. Here are some quick actions:\n\n• 🚨 Emergency SOS - For immediate help\n• 🏥 Find Hospitals - Locate nearby medical care\n• 📞 Call 112 - Direct emergency services\n• 📱 Contact Family - Alert your emergency contacts\n\nWhat specific help do you need right now?";
 };
 
-const toggleVoiceInput = () => {
-  setIsListening(!isListening);
-  // In a real app, this would integrate with speech recognition
-};
+const handleSendMessage = (message: string) => {
+  if (!message.trim()) return;
 
-  const formatTime = (date: Date) => {
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const userMessage: Message = {
+    id: Date.now().toString(),
+    type: 'user',
+    content: message,
+    timestamp: new Date()
   };
 
-  return (
-    <div className="flex flex-col h-full">
-      {/* Header */}
-      <Card className={`glass-morph border-white/20 dark:border-gray-700/50 mb-4 ${isEmergencyMode ? 'border-red-500/50 bg-red-50/50 dark:bg-red-900/20' : ''}`}>
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <motion.div 
-                className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                  isEmergencyMode ? 'bg-red-100 dark:bg-red-900/30' : 'bg-blue-100 dark:bg-blue-900/30'
-                }`}
-                animate={isEmergencyMode ? { scale: [1, 1.1, 1] } : {}}
-                transition={{ duration: 1, repeat: Infinity }}
-              >
-                {isEmergencyMode ? (
-                  <Zap className="w-6 h-6 text-red-600 dark:text-red-400" />
-                ) : (
-                  <Bot className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-                )}
-              </motion.div>
-              <div>
-                <h3 className={`font-bold ${isEmergencyMode ? 'text-red-800 dark:text-red-200' : 'text-gray-900 dark:text-white'}`}>
-                  {isEmergencyMode ? 'Emergency Assistant' : 'AI Assistant'}
-                </h3>
-                <p className={`text-sm ${isEmergencyMode ? 'text-red-600 dark:text-red-300' : 'text-gray-600 dark:text-gray-400'}`}>
-                  {isEmergencyMode ? 'Crisis Support Active' : 'Always here to help • Online'}
-                </p>
-              </div>
+  setMessages(prev => [...prev, userMessage]);
+  // Simulate AI response
+  setTimeout(async () => {
+    const botResponse = await generateBotResponse(message);
+    const botMessage: Message = {
+      id: (Date.now() + 1).toString(),
+      type: 'bot',
+      content: botResponse,
+      timestamp: new Date()
+    };
+
+    setMessages(prev => [...prev, botMessage]);
+    setIsTyping(false);
+  }, 1200);
+};
+
+// Helper function to format time as HH:MM
+function formatTime(date: Date): string {
+  const d = new Date(date);
+  const hours = d.getHours().toString().padStart(2, '0');
+  const minutes = d.getMinutes().toString().padStart(2, '0');
+  return `${hours}:${minutes}`;
+}
+
+return (
+  <div className="flex flex-col h-full">
+    <Card className="mb-4">
+      <CardHeader>
+        <CardTitle>
+          <div className="flex items-center space-x-3">
+            <motion.div
+              animate={isEmergencyMode ? { scale: [1, 1.1, 1] } : {}}
+              transition={{ duration: 1, repeat: Infinity }}
+            >
+              {isEmergencyMode ? (
+                <Zap className="w-6 h-6 text-red-600 dark:text-red-400" />
+              ) : (
+                <Bot className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              )}
+            </motion.div>
+            <div>
+              <h3 className={`font-bold ${isEmergencyMode ? 'text-red-800 dark:text-red-200' : 'text-gray-900 dark:text-white'}`}>
+                {isEmergencyMode ? 'Emergency Assistant' : 'AI Assistant'}
+              </h3>
+              <p className={`text-sm ${isEmergencyMode ? 'text-red-600 dark:text-red-300' : 'text-gray-600 dark:text-gray-400'}`}>
+                {isEmergencyMode ? 'Crisis Support Active' : 'Always here to help • Online'}
+              </p>
             </div>
-            
             <button
               onClick={() => setVoiceEnabled(!voiceEnabled)}
               className={`p-2 rounded-full transition-colors ${
-                voiceEnabled 
-                  ? 'bg-green-100 text-green-600 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400' 
+                voiceEnabled
+                  ? 'bg-green-100 text-green-600 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400'
                   : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400'
               }`}
             >
               {voiceEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
             </button>
-          </CardTitle>
-        </CardHeader>
-      </Card>
+          </div>
+        </CardTitle>
+      </CardHeader>
+    </Card>
 
-      {/* Quick Questions */}
-      <div className={`mb-4 p-3 rounded-xl ${
-        isEmergencyMode 
-          ? 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800' 
-          : 'bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800'
+    {/* Quick Questions */}
+    <div className={`mb-4 p-3 rounded-xl ${
+      isEmergencyMode
+        ? 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800'
+        : 'bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800'
+    }`}>
+      <p className={`text-sm font-medium mb-2 ${
+        isEmergencyMode ? 'text-red-800 dark:text-red-200' : 'text-blue-800 dark:text-blue-200'
       }`}>
-        <p className={`text-sm font-medium mb-2 ${
-          isEmergencyMode ? 'text-red-800 dark:text-red-200' : 'text-blue-800 dark:text-blue-200'
-        }`}>
-          {isEmergencyMode ? 'Emergency Actions:' : 'Quick Questions:'}
-        </p>
-        <div className="flex space-x-2 overflow-x-auto pb-2">
-          {quickQuestions.slice(0, 3).map((question, index) => (
-            <motion.button
-              key={index}
-              onClick={() => handleSendMessage(question)}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className={`flex-shrink-0 px-3 py-1 rounded-full text-xs hover:opacity-80 transition-all ${
-                isEmergencyMode
-                  ? 'bg-red-100 text-red-800 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-300'
-                  : 'bg-blue-100 text-blue-800 hover:bg-blue-200 dark:bg-blue-900/30 dark:text-blue-300'
-              }`}
-            >
-              {question}
-            </motion.button>
-          ))}
-        </div>
+        {isEmergencyMode ? 'Emergency Actions:' : 'Quick Questions:'}
+      </p>
+      <div className="flex space-x-2 overflow-x-auto pb-2">
+        {quickQuestions.slice(0, 3).map((question, index) => (
+          <motion.button
+            key={index}
+            onClick={() => handleSendMessage(question)}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className={`flex-shrink-0 px-3 py-1 rounded-full text-xs hover:opacity-80 transition-all ${
+              isEmergencyMode
+                ? 'bg-red-100 text-red-800 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-300'
+                : 'bg-blue-100 text-blue-800 hover:bg-blue-200 dark:bg-blue-900/30 dark:text-blue-300'
+            }`}
+          >
+            {question}
+          </motion.button>
+        ))}
       </div>
+    </div>
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto space-y-4 mb-4">
-        <AnimatePresence>
-          {messages.map((message) => (
-            <motion.div
-              key={message.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
-            >
-              <div className={`max-w-xs lg:max-w-md ${message.type === 'user' ? 'order-2' : 'order-1'}`}>
-                <div className={`flex items-end space-x-2 ${message.type === 'user' ? 'flex-row-reverse space-x-reverse' : ''}`}>
-                  <motion.div 
-                    className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                      message.type === 'user' 
-                        ? 'bg-blue-600 text-white' 
-                        : isEmergencyMode
-                        ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400'
-                        : 'bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-300'
-                    }`}
-                    whileHover={{ scale: 1.1 }}
-                  >
-                    {message.type === 'user' ? (
-                      <User className="w-4 h-4" />
-                    ) : isEmergencyMode ? (
-                      <Zap className="w-4 h-4" />
-                    ) : (
-                      <Bot className="w-4 h-4" />
-                    )}
-                  </motion.div>
-                  <motion.div 
-                    className={`px-4 py-2 rounded-2xl ${
-                      message.type === 'user'
-                        ? 'bg-blue-600 text-white'
-                        : isEmergencyMode
-                        ? 'bg-red-50 text-red-900 border border-red-200 dark:bg-red-900/20 dark:text-red-100 dark:border-red-800'
-                        : 'bg-white text-gray-900 shadow-sm dark:bg-gray-800 dark:text-white'
-                    }`}
-                    whileHover={{ scale: 1.02 }}
-                  >
-                    <p className="text-sm whitespace-pre-line">{message.content}</p>
-                    <p className={`text-xs mt-1 ${
-                      message.type === 'user' 
-                        ? 'text-blue-100' 
-                        : isEmergencyMode
-                        ? 'text-red-500 dark:text-red-400'
-                        : 'text-gray-500 dark:text-gray-400'
-                    }`}>
-                      {formatTime(message.timestamp)}
-                    </p>
-                  </motion.div>
-                </div>
-              </div>
-            </motion.div>
-          ))}
-        </AnimatePresence>
-        
-        {isTyping && (
+    {/* Messages */}
+    <div className="flex-1 overflow-y-auto space-y-4 mb-4">
+      <AnimatePresence>
+        {messages.map((message) => (
           <motion.div
+            key={message.id}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="flex justify-start"
+            exit={{ opacity: 0, y: -20 }}
+            className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
           >
-            <div className="flex items-end space-x-2">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                isEmergencyMode
-                  ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400'
-                  : 'bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-300'
-              }`}>
-                {isEmergencyMode ? <Zap className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
-              </div>
-              <div className={`px-4 py-2 rounded-2xl ${
-                isEmergencyMode
-                  ? 'bg-red-50 border border-red-200 dark:bg-red-900/20 dark:border-red-800'
-                  : 'bg-white shadow-sm dark:bg-gray-800'
-              }`}>
-                <div className="flex space-x-1">
-                  {[0, 1, 2].map((i) => (
-                    <motion.div
-                      key={i}
-                      className={`w-2 h-2 rounded-full ${
-                        isEmergencyMode ? 'bg-red-400' : 'bg-gray-400'
-                      }`}
-                      animate={{ scale: [1, 1.5, 1] }}
-                      transition={{ 
-                        duration: 0.6, 
-                        repeat: Infinity, 
-                        delay: i * 0.2 
-                      }}
-                    />
-                  ))}
-                </div>
+            <div className={`max-w-xs lg:max-w-md ${message.type === 'user' ? 'order-2' : 'order-1'}`}>
+              <div className={`flex items-end space-x-2 ${message.type === 'user' ? 'flex-row-reverse space-x-reverse' : ''}`}>
+                <motion.div
+                  className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                    message.type === 'user'
+                      ? 'bg-blue-600 text-white'
+                      : isEmergencyMode
+                      ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400'
+                      : 'bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-300'
+                  }`}
+                  whileHover={{ scale: 1.1 }}
+                >
+                  {message.type === 'user' ? (
+                    <User className="w-4 h-4" />
+                  ) : isEmergencyMode ? (
+                    <Zap className="w-4 h-4" />
+                  ) : (
+                    <Bot className="w-4 h-4" />
+                  )}
+                </motion.div>
+                <motion.div
+                  className={`px-4 py-2 rounded-2xl ${
+                    message.type === 'user'
+                      ? 'bg-blue-600 text-white'
+                      : isEmergencyMode
+                      ? 'bg-red-50 text-red-900 border border-red-200 dark:bg-red-900/20 dark:text-red-100 dark:border-red-800'
+                      : 'bg-white text-gray-900 shadow-sm dark:bg-gray-800 dark:text-white'
+                  }`}
+                  whileHover={{ scale: 1.02 }}
+                >
+                  <p className="text-sm whitespace-pre-line">{message.content}</p>
+                  <p className={`text-xs mt-1 ${
+                    message.type === 'user'
+                      ? 'text-blue-100'
+                      : isEmergencyMode
+                      ? 'text-red-500 dark:text-red-400'
+                      : 'text-gray-500 dark:text-gray-400'
+                  }`}>
+                    {formatTime(message.timestamp)}
+                  </p>
+                </motion.div>
               </div>
             </div>
           </motion.div>
-        )}
-        <div ref={messagesEndRef} />
-      </div>
+        ))}
+      </AnimatePresence>
 
-      {/* Input Area */}
-      <Card className="glass-morph border-white/20 dark:border-gray-700/50">
-        <CardContent className="p-4">
-          <div className="flex items-center space-x-2">
-            <motion.button
-              onClick={toggleVoiceInput}
-              whileHover={{ scale: 1.1 }}
-              onKeyDown={(e) => e.key === 'Enter' && handleSendMessage(inputMessage)}
-              className={`p-2 rounded-full transition-colors ${
-                isListening 
-                  ? 'bg-red-100 text-red-600 animate-pulse dark:bg-red-900/30 dark:text-red-400' 
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400'
-              }`}
-            >
-              {isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
-            </motion.button>
-            
-            <input
-              type="text"
-              value={inputMessage}
-              onChange={(e) => setInputMessage(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleSendMessage(inputMessage)}
-              placeholder={isEmergencyMode ? "Tell me what's happening..." : "Ask me anything about emergencies..."}
-              className={`flex-1 px-4 py-2 border rounded-full focus:ring-2 focus:border-transparent glass-morph ${
-                isEmergencyMode
-                  ? 'border-red-300 focus:ring-red-500 dark:border-red-700'
-                  : 'border-gray-300 focus:ring-blue-500 dark:border-gray-600'
-              } text-gray-900 dark:text-white placeholder-gray-500`}
-            />
-            
-            <motion.button
-              onClick={() => handleSendMessage(inputMessage)}
-              disabled={!inputMessage.trim()}
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-              className={`p-2 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-                isEmergencyMode
-                  ? 'bg-red-600 text-white hover:bg-red-700'
-                  : 'bg-blue-600 text-white hover:bg-blue-700'
-              }`}
-            >
-              <Send className="w-5 h-5" />
-            </motion.button>
+      {isTyping && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex justify-start"
+        >
+          <div className="flex items-end space-x-2">
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+              isEmergencyMode
+                ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400'
+                : 'bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-300'
+            }`}>
+              {isEmergencyMode ? <Zap className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
+            </div>
+            <div className={`px-4 py-2 rounded-2xl ${
+              isEmergencyMode
+                ? 'bg-red-50 border border-red-200 dark:bg-red-900/20 dark:border-red-800'
+                : 'bg-white shadow-sm dark:bg-gray-800'
+            }`}>
+              <div className="flex space-x-1">
+                {[0, 1, 2].map((i) => (
+                  <motion.div
+                    key={i}
+                    className={`w-2 h-2 rounded-full ${
+                      isEmergencyMode ? 'bg-red-400' : 'bg-gray-400'
+                    } animate-bounce`}
+                    style={{ animationDelay: `${i * 0.2}s` }}
+                  />
+                ))}
+              </div>
+            </div>
           </div>
-        </CardContent>
-      </Card>
+        </motion.div>
+      )}
+      <div ref={messagesEndRef} />
     </div>
-  );
-};
+
+    {/* Input Area */}
+    <Card>
+      <CardContent>
+        <div className="flex items-center space-x-2">
+          <motion.button
+            onClick={toggleVoiceInput}
+            whileHover={{ scale: 1.1 }}
+            className={`p-2 rounded-full transition-colors ${
+              isListening
+                ? 'bg-red-100 text-red-600 animate-pulse dark:bg-red-900/30 dark:text-red-400'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400'
+            }`}
+          >
+            {isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+          </motion.button>
+
+          <input
+            type="text"
+            value={inputMessage}
+            onChange={(e) => setInputMessage(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleSendMessage(inputMessage)}
+            placeholder={isEmergencyMode ? "Tell me what's happening..." : "Ask me anything about emergencies..."}
+            className={`flex-1 px-4 py-2 border rounded-full focus:ring-2 focus:border-transparent glass-morph ${
+              isEmergencyMode
+                ? 'border-red-300 focus:ring-red-500 dark:border-red-700'
+                : 'border-gray-300 focus:ring-blue-500 dark:border-gray-600'
+            } text-gray-900 dark:text-white placeholder-gray-500`}
+          />
+
+          <motion.button
+            onClick={() => handleSendMessage(inputMessage)}
+            disabled={!inputMessage.trim()}
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            className={`p-2 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+              isEmergencyMode
+                ? 'bg-red-600 text-white hover:bg-red-700'
+                : 'bg-blue-600 text-white hover:bg-blue-700'
+            }`}
+          >
+            <Send className="w-5 h-5" />
+          </motion.button>
+        </div>
+      </CardContent>
+    </Card>
+  </div>
+);
+}
 
 export default AIEmergencyChat;

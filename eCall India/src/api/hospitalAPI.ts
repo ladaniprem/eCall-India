@@ -17,6 +17,12 @@ export interface Hospital {
     specialties: string[];
 }
 
+// Example implementation, replace with your actual API logic
+export async function fetchNearbyHospitals(): Promise<Hospital[]> {
+  // TODO: Replace with real API call
+  return [];
+}
+
 export const getHospitals = async (lat: number, lng: number, radius: number = 10000): Promise<Hospital[]> => {
     try {
         const response = await axios.get(SEARCH_API_URL, {
@@ -52,7 +58,7 @@ export const getHospitals = async (lat: number, lng: number, radius: number = 10
             // Simulated data - in a real app, these would come from your backend
             type: Math.random() > 0.5 ? 'government' : 'private',
             status: ['available', 'busy', 'full'][Math.floor(Math.random() * 3)] as 'available' | 'busy' | 'full',
-            rating: (Math.random() * 2 + 3).toFixed(1), // Random rating between 3.0 and 5.0
+            rating: Number((Math.random() * 2 + 3).toFixed(1)), // Random rating between 3.0 and 5.0
             estimatedTime: Math.floor(Math.random() * 30) + 5, // Random time between 5 and 35 minutes
             specialties: [
                 'Emergency Care',
