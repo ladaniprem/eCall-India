@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { AlertTriangle, Navigation, Phone, Clock } from 'lucide-react';
+import { AlertTriangle, Navigation, Phone, Clock, CheckCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from './ui/sheet';
 import { calculateDistance, formatDistance } from '../lib/utils';
@@ -25,23 +25,20 @@ export const LiveLocationMap: React.FC<LiveLocationMapProps> = ({
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number }>(propLocation || { lat: 0, lng: 0 });
+  const [calledHospitals, setCalledHospitals] = useState<string[]>([]); // Track called hospitals
 
-  // Update location from props if changed
   useEffect(() => {
     if (propLocation) {
       setUserLocation(propLocation);
     }
   }, [propLocation]);
 
-  // Watch geolocation
   useEffect(() => {
     if (!navigator.geolocation) {
       setError('Geolocation is not supported by your browser.');
       return;
     }
-
     let isMounted = true;
-
     const watchId = navigator.geolocation.watchPosition(
       (position) => {
         if (isMounted) {
@@ -56,14 +53,12 @@ export const LiveLocationMap: React.FC<LiveLocationMapProps> = ({
       },
       { enableHighAccuracy: true }
     );
-
     return () => {
       isMounted = false;
       navigator.geolocation.clearWatch(watchId);
     };
   }, []);
 
-  // Fetch hospitals
   const fetchHospitals = useCallback(async () => {
     try {
       setIsLoading(true);
@@ -108,6 +103,16 @@ export const LiveLocationMap: React.FC<LiveLocationMapProps> = ({
 
   const hasValidLocation = userLocation.lat !== 0 && userLocation.lng !== 0;
 
+  // Handler for "Call Now"
+  const handleHospitalCall = (hospital: Hospital) => {
+    setCalledHospitals((prev) => [...prev, hospital.id]);
+    onHospitalCall(hospital);
+  };
+
+  // Google Maps directions URL
+  const getGoogleMapsUrl = (hospital: Hospital) =>
+    `https://www.google.com/maps/dir/?api=1&origin=${userLocation.lat},${userLocation.lng}&destination=${hospital.lat},${hospital.lng}&travelmode=driving`;
+
   if (error) {
     return (
       <Card className="glass-morph border-white/20 dark:border-gray-700/50">
@@ -145,10 +150,12 @@ export const LiveLocationMap: React.FC<LiveLocationMapProps> = ({
       {/* Radius Slider */}
       <Card className="glass-morph border-white/20 dark:border-gray-700/50">
         <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <Navigation className="w-5 h-5 text-blue-600" />
-            <span>Search Radius: {searchRadius} km</span>
-          </CardTitle>
+            <CardTitle className="flex items-center space-x-2">
+            <Navigation className="w-5 h-5 text-gradient bg-gradient-to-r from-white via-yellow-400 to-yellow-600 text-transparent bg-clip-text" />
+            <span className="text-gradient bg-gradient-to-r from-white via-yellow-400 to-yellow-600 text-transparent bg-clip-text">
+              Search Radius: {searchRadius} km
+            </span>
+            </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
@@ -208,6 +215,9 @@ export const LiveLocationMap: React.FC<LiveLocationMapProps> = ({
                         <h4 className="font-semibold text-gray-900 dark:text-white">
                           {hospital.name}
                         </h4>
+                        {calledHospitals.includes(hospital.id) && (
+                          <CheckCircle className="w-4 h-4 text-green-500 ml-2" title="Called" />
+                        )}
                       </div>
 
                       <div className="flex items-center space-x-4 text-sm text-gray-600 dark:text-gray-400 mb-2">
@@ -260,13 +270,18 @@ export const LiveLocationMap: React.FC<LiveLocationMapProps> = ({
 
                   <div className="flex space-x-2">
                     <motion.button
-                      onClick={() => onHospitalCall(hospital)}
+                      onClick={() => handleHospitalCall(hospital)}
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
-                      className="flex-1 bg-red-600 text-white py-2 rounded-lg hover:bg-red-700 transition-colors flex items-center justify-center space-x-2"
+                      className={`flex-1 py-2 rounded-lg flex items-center justify-center space-x-2 transition-colors ${
+                        calledHospitals.includes(hospital.id)
+                          ? 'bg-green-600 text-white cursor-default'
+                          : 'bg-red-600 text-white hover:bg-red-700'
+                      }`}
+                      disabled={calledHospitals.includes(hospital.id)}
                     >
                       <Phone className="w-4 h-4" />
-                      <span>Call Now</span>
+                      <span>{calledHospitals.includes(hospital.id) ? 'Called' : 'Call Now'}</span>
                     </motion.button>
 
                     <Sheet>
@@ -316,14 +331,29 @@ export const LiveLocationMap: React.FC<LiveLocationMapProps> = ({
                             </div>
 
                             <motion.button
-                              onClick={() => onHospitalCall(hospital)}
+                              onClick={() => handleHospitalCall(hospital)}
                               whileHover={{ scale: 1.02 }}
                               whileTap={{ scale: 0.98 }}
-                              className="w-full bg-red-600 text-white py-3 rounded-lg hover:bg-red-700 transition-colors flex items-center justify-center space-x-2"
+                              className={`w-full py-3 rounded-lg flex items-center justify-center space-x-2 transition-colors ${
+                                calledHospitals.includes(hospital.id)
+                                  ? 'bg-green-600 text-white cursor-default'
+                                  : 'bg-red-600 text-white hover:bg-red-700'
+                              }`}
+                              disabled={calledHospitals.includes(hospital.id)}
                             >
                               <Phone className="w-5 h-5" />
-                              <span>Call {hospital.name}</span>
+                              <span>{calledHospitals.includes(hospital.id) ? `Called ${hospital.name}` : `Call ${hospital.name}`}</span>
                             </motion.button>
+
+                            <a
+                              href={getGoogleMapsUrl(hospital)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="w-full mt-3 inline-flex items-center justify-center bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition-colors space-x-2"
+                            >
+                              <Navigation className="w-5 h-5" />
+                              <span>Open in Google Maps</span>
+                            </a>
                           </div>
                         </div>
                       </SheetContent>

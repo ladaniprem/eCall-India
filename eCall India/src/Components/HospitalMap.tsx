@@ -3,7 +3,7 @@ import '@tomtom-international/web-sdk-maps/dist/maps.css';
 
 interface Hospital {
   position: { lat: number; lon: number };
-  poi: { name: string };
+  poi: { name: string; phone?: string };
 }
 
 interface Props {
@@ -29,15 +29,19 @@ export default function HospitalMap({ userLocation, hospitals }: Props) {
       zoom: 13,
     });
 
-    const addMarker = (lat: number, lon: number, title: string) => {
-      const popup = new tt.Popup({ offset: 35 }).setText(title);
+    const addMarker = (lat: number, lon: number, name: string, phone?: string) => {
+      let popupContent = `<strong>${name}</strong>`;
+      if (phone) {
+        popupContent += `<br/><a href="tel:${phone}">Call Now: ${phone}</a>`;
+      }
+      const popup = new tt.Popup({ offset: 35 }).setHTML(popupContent);
       new tt.Marker().setLngLat([lon, lat]).setPopup(popup).addTo(map);
     };
 
     addMarker(userLocation.lat, userLocation.lon, "You are here");
 
     hospitals.forEach((hospital) =>
-      addMarker(hospital.position.lat, hospital.position.lon, hospital.poi.name)
+      addMarker(hospital.position.lat, hospital.position.lon, hospital.poi.name, hospital.poi.phone)
     );
 
     return () => map.remove();

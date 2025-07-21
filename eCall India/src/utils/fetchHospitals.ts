@@ -21,11 +21,14 @@ export const fetchNearbyHospitals = async (lat: number, lon: number) => {
       };
     };
     return data.results.map((hospital: Hospital) => ({
-      name: hospital.poi.name,
-      phone: hospital.poi.phone,
-      address: hospital.address.freeformAddress,
-      lat: hospital.position.lat,
-      lon: hospital.position.lon
+      position: {
+        lat: hospital.position.lat,
+        lon: hospital.position.lon,
+      },
+      poi: {
+        name: hospital.poi.name,
+        phone: hospital.poi.phone,
+      },
     }));
   } catch (err) {
     console.error("TomTom API Error:", err);

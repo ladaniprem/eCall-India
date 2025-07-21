@@ -121,9 +121,9 @@ const HospitalSearch: React.FC = () => {
       {/* Controls */}
       <div className="bg-white border-b border-gray-200 px-4 py-4">
         <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Search Radius: {searchRadius} km
-          </label>
+            <label className="block text-sm font-medium mb-2 text-white bg-gradient-to-r from-yellow-400 via-yellow-300 to-white rounded px-2 py-1 shadow">
+              Search Radius: <span className="text-yellow-600 font-bold">{searchRadius} km</span>
+            </label>
           <input
             type="range"
             min="1"
