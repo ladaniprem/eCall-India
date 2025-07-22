@@ -1,21 +1,22 @@
 import cloudinaryModule from 'cloudinary';
 import { CloudinaryStorage } from 'multer-storage-cloudinary';
 import multer from 'multer';
+import { v2 as cloudinary } from 'cloudinary';
 
-const cloudinary = cloudinaryModule.v2;
-
-// Configure Cloudinary
-if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
-  throw new Error('❌ Missing Cloudinary environment variables. Please set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET.');
-}
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-});
+export const configureCloudinary = () => {
+  // Configure Cloudinary
+  if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
+    throw new Error('❌ Missing Cloudinary environment variables. Please set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET.');
+  }
+  cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
+  });
+};
 
 // Verify Cloudinary configuration
-const verifyCloudinaryConfig = () => {
+export const verifyCloudinaryConfig = () => {
   const { cloud_name, api_key, api_secret } = cloudinary.config();
   
   if (!cloud_name || !api_key || !api_secret) {
@@ -198,6 +199,5 @@ export {
   uploadEmergencyVideo,
   uploadProfileImage,
   cloudinaryUtils,
-  verifyCloudinaryConfig,
   testCloudinaryConnection
 };

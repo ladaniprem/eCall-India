@@ -3,7 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
-dotenv.config();
+dotenv.config({ path: '../.env' });
 
 // Import middleware
 import { globalErrorHandler, notFoundHandler } from './middleware/errorHandler.js';
@@ -15,7 +15,9 @@ import healthRoutes from './routes/health.js';
 
 // Import database connection
 import database from './config/database.js';
-import { verifyCloudinaryConfig } from './config/cloudinary.js';
+import { configureCloudinary, verifyCloudinaryConfig } from './config/cloudinary.js';
+
+
 
 const app = express();
 

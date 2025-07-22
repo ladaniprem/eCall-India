@@ -1,7 +1,23 @@
-import  app  from './app.js';
-const PORT = process.env.PORT || 3001;
+let app;
 
-const server = app.listen(PORT, () => {
+import { configureCloudinary } from './config/cloudinary.js';
+
+// Dynamically import app after dotenv has loaded environment variables
+import('./app.js').then(module => {
+  app = module.default;
+  configureCloudinary();
+  startServer();
+}).catch(error => {
+  console.error('Failed to load app:', error);
+  process.exit(1);
+});
+
+let serverInstance;
+
+function startServer() {
+  const PORT = process.env.PORT || 3001;
+
+  serverInstance = app.listen(PORT, () => {
   console.log(`🌐 eCall India API Server running on port ${PORT}`);
   console.log(`📍 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`🔗 Health Check: http://localhost:${PORT}/api/health`);
@@ -10,7 +26,7 @@ const server = app.listen(PORT, () => {
 });
 
 // Handle server errors
-server.on('error', (error) => {
+serverInstance.on('error', (error) => {
   if (error.syscall !== 'listen') {
     throw error;
   }
@@ -29,4 +45,6 @@ server.on('error', (error) => {
   }
 });
 
-export default server;
+}
+
+export default serverInstance;
