@@ -13,8 +13,8 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onComplete }) => {
 
   const onboardingSteps = [
     {
-      title: "Welcome to eCall India",
-      subtitle: "Emergency Response at Your Fingertips",
+      title: "Welcome to JeevSanket",
+      subtitle: "From Crash to Care - In One Signal!",
       icon: Shield,
       color: "text-blue-600",
       description: "Your safety companion that works on any smartphone - no expensive devices needed."

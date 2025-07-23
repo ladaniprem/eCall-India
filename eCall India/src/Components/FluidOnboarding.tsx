@@ -13,8 +13,8 @@ const FluidOnboarding: React.FC<FluidOnboardingProps> = ({ onComplete }) => {
 
   const onboardingSteps = [
     {
-      title: "Welcome to eCall India",
-      subtitle: "Life-saving Design Meets Smart Technology",
+      title: "Welcome to JeevSanket India",
+      subtitle: "From Crash to Care - In One Signal",
       icon: Shield,
       color: "text-blue-600",
       bgGradient: "from-blue-50 via-indigo-50 to-purple-50",

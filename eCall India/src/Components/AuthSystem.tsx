@@ -424,7 +424,7 @@ const AuthSystem: React.FC<AuthSystemProps> = ({ onAuthComplete }) => {
                   Create Account
                 </CardTitle>
                 <p className="text-gray-700 dark:text-gray-300">
-                  Join eCall India for emergency protection
+                  Join JeevSanket for emergency protection
                 </p>
               </CardHeader>
               <CardContent className="space-y-4">

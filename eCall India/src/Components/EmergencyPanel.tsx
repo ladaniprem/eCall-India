@@ -12,7 +12,7 @@ const EmergencyPanel: React.FC<EmergencyPanelProps> = ({ onBack, crashSeverity }
   const [recordingTime, setRecordingTime] = useState(0);
   const [crashDetected] = useState(!!crashSeverity);
   const [emergencyMessage, setEmergencyMessage] = useState(
-    "🚨 EMERGENCY ALERT: I've been involved in an accident. Location: Connaught Place, New Delhi. Please send help immediately. This is an automated message from eCall India."
+    "🚨 EMERGENCY ALERT: I've been involved in an accident. Location: Connaught Place, New Delhi. Please send help immediately. This is an automated message from JeevSanket India."
   );
 
   useEffect(() => {

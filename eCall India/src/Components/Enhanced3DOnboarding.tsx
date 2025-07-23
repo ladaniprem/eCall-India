@@ -14,8 +14,8 @@ const Enhanced3DOnboarding: React.FC<Enhanced3DOnboardingProps> = ({ onComplete 
 
   const onboardingSteps = [
     {
-      title: "Welcome to eCall India",
-      subtitle: "Your Guardian Angel on Every Journey",
+      title: "Welcome to JeevSanket",
+      subtitle: "From Crash to Care - In One Signal",
       icon: Shield,
       color: "text-blue-600",
       bgGradient: "from-blue-50 via-indigo-50 to-purple-50",
