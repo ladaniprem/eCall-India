@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Shield, Phone, ChevronRight, Check, Sparkles, Zap, Heart, Users } from 'lucide-react';
+import { Shield, Phone, ChevronRight, Sparkles, Zap, Heart, Users } from 'lucide-react';
 
 interface Enhanced3DOnboardingProps {
   onComplete: () => void;
@@ -8,8 +8,6 @@ interface Enhanced3DOnboardingProps {
 
 const Enhanced3DOnboarding: React.FC<Enhanced3DOnboardingProps> = ({ onComplete }) => {
   const [currentStep, setCurrentStep] = useState(0);
-  const [phoneNumber, setPhoneNumber] = useState('');
-  const [name, setName] = useState('');
   const [isAnimating, setIsAnimating] = useState(false);
 
   const onboardingSteps = [
@@ -510,10 +508,10 @@ const Enhanced3DOnboarding: React.FC<Enhanced3DOnboardingProps> = ({ onComplete 
   }
 
   // Authentication screens with enhanced styling
-  if (currentStep === onboardingSteps.length) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center px-4 relative overflow-hidden">
-        {/* Enhanced Background */}
+   if (currentStep === onboardingSteps.length) {
+     return (
+       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center px-4 relative overflow-hidden">
+        {/* Enhanced Background*/}
         <div className="absolute inset-0 overflow-hidden">
           <motion.div 
             className="absolute top-1/4 left-1/4 w-64 h-64 bg-blue-200/30 rounded-full blur-3xl"
@@ -526,130 +524,16 @@ const Enhanced3DOnboarding: React.FC<Enhanced3DOnboardingProps> = ({ onComplete 
             transition={{ duration: 25, repeat: Infinity }}
           />
         </div>
-
         <motion.div 
           className="max-w-md w-full relative z-10"
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.5 }}
         >
-          <div className="bg-white/20 backdrop-blur-lg rounded-3xl shadow-2xl border border-white/30 p-8">
-            <div className="text-center mb-8">
-              {/* 3D Phone Icon */}
-              <motion.div
-                className="w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-2xl"
-                animate={{ 
-                  rotateY: [0, 360],
-                  scale: [1, 1.1, 1]
-                }}
-                transition={{ 
-                  rotateY: { duration: 4, repeat: Infinity },
-                  scale: { duration: 2, repeat: Infinity }
-                }}
-              >
-                <Phone className="w-10 h-10 text-white" />
-              </motion.div>
-              
-              <h2 className="text-3xl font-bold text-gray-900 mb-2">Enter Your Phone Number</h2>
-              <p className="text-gray-700">We'll send you a verification code for security</p>
-            </div>
-
-            <form onSubmit={(e) => {
-              e.preventDefault();
-              if (phoneNumber.length === 10) setCurrentStep(onboardingSteps.length + 1);
-            }}>
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-800 mb-2">
-                  Phone Number
-                </label>
-                <div className="flex">
-                  <span className="inline-flex items-center px-4 rounded-l-xl border border-r-0 border-white/30 bg-white/10 backdrop-blur-sm text-gray-700 text-sm font-medium">
-                    +91
-                  </span>
-                  <motion.input
-                    type="tel"
-                    value={phoneNumber}
-                    onChange={(e) => setPhoneNumber(e.target.value)}
-                    className="flex-1 px-4 py-3 border border-white/30 rounded-r-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg bg-white/10 backdrop-blur-sm placeholder-gray-500"
-                    placeholder="98765 43210"
-                    maxLength={10}
-                    required
-                    whileFocus={{ scale: 1.02 }}
-                  />
-                </div>
-              </div>
-
-              <motion.button
-                type="submit"
-                disabled={phoneNumber.length !== 10}
-                className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-4 rounded-xl font-semibold text-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transform hover:scale-105 flex items-center justify-center space-x-2"
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                <span>Send OTP</span>
-                <ChevronRight className="w-5 h-5" />
-              </motion.button>
-            </form>
-          </div>
         </motion.div>
       </div>
     );
   }
-
-  // OTP and Name screens with similar enhanced styling...
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center px-4">
-      <motion.div 
-        className="max-w-md w-full"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-      >
-        <div className="bg-white/20 backdrop-blur-lg rounded-3xl shadow-2xl border border-white/30 p-8">
-          <div className="text-center mb-8">
-            <motion.div
-              className="w-20 h-20 bg-gradient-to-br from-green-500 to-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-2xl"
-              animate={{ scale: [1, 1.1, 1] }}
-              transition={{ duration: 2, repeat: Infinity }}
-            >
-              <Check className="w-10 h-10 text-white" />
-            </motion.div>
-            <h2 className="text-3xl font-bold text-gray-900 mb-2">Almost Done!</h2>
-            <p className="text-gray-700">Complete your emergency profile</p>
-          </div>
-
-          <form onSubmit={(e) => {
-            e.preventDefault();
-            if (name.trim()) onComplete();
-          }}>
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-800 mb-2">
-                Full Name
-              </label>
-              <motion.input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full px-4 py-3 border border-white/30 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg bg-white/10 backdrop-blur-sm placeholder-gray-500"
-                placeholder="Enter your full name"
-                required
-                whileFocus={{ scale: 1.02 }}
-              />
-            </div>
-
-            <motion.button
-              type="submit"
-              disabled={!name.trim()}
-              className="w-full bg-gradient-to-r from-green-600 to-blue-600 text-white py-4 rounded-xl font-semibold text-lg hover:from-green-700 hover:to-blue-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transform hover:scale-105"
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              Complete Setup
-            </motion.button>
-          </form>
-        </div>
-      </motion.div>
-    </div>
-  );
 };
 
 export default Enhanced3DOnboarding;
